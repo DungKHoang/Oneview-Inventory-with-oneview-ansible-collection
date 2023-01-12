@@ -1,0 +1,82 @@
+# --- Get  information
+- name: Initialize
+  set_fact:
+    ipv4:                             ""
+    ipv6:                             ""
+    logicalInterconnect:              ""
+    interconnec:                      ""
+
+    
+- name: Set variables
+  set_fact:
+    bayNumber:                        "{{ bay_item.bayNumber }}"
+    bayPowerState:                    "{{ bay_item.bayPowerState }}"
+    powerAllocationWatts:             "{{ bay_item.powerAllocationWatts }}"
+    changeState:                      "{{ bay_item.changeState }}"
+
+    interconnectBayType:              "{{ bay_item.interconnectBayType }}"
+    interconnectModel:                "{{ bay_item.interconnectModel }}"
+    partNumber:                       "{{ bay_item.partNumber }}"
+    serialNumber:                     "{{ bay_item.serialNumber }}"
+
+    interconnectUri:                  "{{ bay_item.interconnectUri }}"
+    logicalInterconnectUri:           "{{ bay_item.logicalInterconnectUri }}"
+
+
+- name: Set Li
+  vars:
+    _interconnect:                    "{{ interconnect_endpoint | selectattr('uri', 'equalto', interconnectUri ) | map(attribute='name') | first  }}"
+  set_fact:
+    interconnect:                     "{{ _interconnect | replace(', ', '-') }}"
+  when: (interconnectUri  != None) and ('sas' not in  interconnectUri )
+
+- name: Set Lig
+  vars:
+    _logical_interconnect:            "{{ logical_interconnect_endpoint | selectattr('uri', 'equalto', logicalInterconnectUri  ) | map(attribute='name') | first  }}"
+  set_fact:
+    logicalInterconnect :             "{{ _logical_interconnect | replace(', ', '-') }}"
+  when: (logicalInterconnectUri  != None) and ('sas' not in  logicalInterconnectUri )
+
+- name: Set IPv4 
+  set_fact:
+    ipv4:                            "{{ bay_item.ipv4Setting.ipAddress }}"
+  when: bay_item.ipv4Setting != None and bay_item.ipv4Setting.mode != 'DHCP'
+
+
+- name: Set IPv6
+  set_fact:
+    ipv6:                            "{{ bay_item.ipv6Setting.ipAddress }}"
+  when: bay_item.ipv6Setting != None and bay_item.ipv6Setting.mode != 'DHCP'
+
+
+
+- name: Add to csv file
+  lineinfile:
+      path: "{{ interconnect_bay_csv }}"
+      line: >-
+        {{  enclosureName  + ',' + bayNumber + ',' + interconnectModel + ',' +
+            ipv4 + ',' + ipv6 + ',' +
+            powerAllocationWatts + ',' +
+            partNumber + ',' + serialNumber + ',' +
+            logicalInterconnectUri + ',' + interconnectUri + ',' +
+            logicalInterconnect + ',' + interconnect }}
+
+      # u_parent,u_bay_number,model_id,
+      # u_ipv4,u_ipv6,
+      # u_power_allocation,
+      # u_part_number,serial_number,
+      # logicalInterconnectUri,interconnectUri,
+      # u_logical_interconnect,u_interconnect
+
+      # Not considered
+      # ipv*Settings,serialConsole
+
+
+- name: Add to model csv file
+  vars:
+    _cat:           "{{ model_categories[deviceBayType] }}"
+  lineinfile:
+      path: "{{ model_csv }}"
+      line: >-
+        {{ interconnectModel + ',' + _cat + ',' + company + ',' + interconnectBayType}}
+      # name,model_categories,manufacturer,short_description

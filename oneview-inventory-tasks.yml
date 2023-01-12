@@ -1,0 +1,155 @@
+---
+
+- name: Set entry variables
+  set_fact:
+        hostname:           '{{ov_item.ip}}'
+        username:           '{{ov_item.username}}'
+        password:           '{{ov_item.password}}'
+        auth_login_domain:  '{{ov_item.authLoginDomain}}'
+        api_version:        '{{ov_item.api_version}}'
+
+
+# -------------------- Start here
+
+- name: Create session on {{ hostname }}
+  oneview_get_session_id:
+        hostname:   "{{ hostname }}"
+        username:   "{{ username }}"
+        password:   "{{ password }}"
+  register: session
+
+
+##- name: Get appliance on {{ hostname }}
+ # oneview_appliance_facts?????:
+ #   hostname:   "{{ hostname }}"
+ #   username:   "{{ username }}"
+ #   password:   "{{ password }}"
+  # register: result_appliance
+
+#- name: Check appliance version
+#  set_fact:
+#    isSynergy:   "{{ result_appliance.platformType == 'hardware }}"
+
+
+
+- name: Get enclosure inventory on {{ hostname }}
+  oneview_enclosure_facts:
+    hostname:           "{{ hostname }}"
+    sessionID:          "{{ session.ansible_facts.session }}"
+  register: result_enclosure
+
+
+- name: Get logical enclosure inventory on {{ hostname }}
+  oneview_logical_enclosure_facts:
+    hostname:           "{{ hostname }}"
+    sessionID:          "{{ session.ansible_facts.session }}"
+  register: result_le
+
+- name: Get enclosure group inventory on {{ hostname }}
+  oneview_enclosure_group_facts:
+    hostname:           "{{ hostname }}"
+    sessionID:          "{{ session.ansible_facts.session }}"
+  register: result_eg
+
+- name: Get interconnect inventory on {{ hostname }}
+  oneview_interconnect_facts:
+    hostname:           "{{ hostname }}"
+    sessionID:          "{{ session.ansible_facts.session }}"
+  register: result_ic
+
+- name: Get interconnect type inventory on {{ hostname }}
+  oneview_interconnect_type_facts:
+    hostname:           "{{ hostname }}"
+    sessionID:          "{{ session.ansible_facts.session }}"
+  register: result_ic_type
+
+- name: Get logical interconnect inventory on {{ hostname }}
+  oneview_logical_interconnect_facts:
+    hostname:           "{{ hostname }}"
+    sessionID:          "{{ session.ansible_facts.session }}"
+  register: result_li
+
+- name: Get logical interconnect inventory on {{ hostname }}
+  oneview_logical_interconnect_group_facts:
+    hostname:           "{{ hostname }}"
+    sessionID:          "{{ session.ansible_facts.session }}"
+  register: result_lig
+
+- name: Get server hardware inventory on {{ hostname }} 
+  oneview_server_hardware_facts:
+    hostname:           "{{ hostname }}"
+    sessionID:          "{{ session.ansible_facts.session }}"
+  register: result_server_hw
+
+- name: Get server profile inventory on {{ hostname }} 
+  oneview_server_profile_facts:
+    hostname:           "{{ hostname }}"
+    sessionID:          "{{ session.ansible_facts.session }}"
+  register: result_server_profile
+
+- name: Get uplink set inventory on {{ hostname }} 
+  oneview_uplink_set_facts:
+    hostname:           "{{ hostname }}"
+    sessionID:          "{{ session.ansible_facts.session }}"
+  register: result_upl
+
+- name: Get fc inventory on {{ hostname }} 
+  oneview_fc_network_facts:
+    hostname:           "{{ hostname }}"
+    sessionID:          "{{ session.ansible_facts.session }}"
+  register: result_fc
+
+- name: Get fcoe inventory on {{ hostname }} 
+  oneview_fcoe_network_facts:
+    hostname:           "{{ hostname }}"
+    sessionID:          "{{ session.ansible_facts.session }}"
+  register: result_fcoe
+
+- name: Get ethernet inventory on {{ hostname }} 
+  oneview_ethernet_network_facts:
+    hostname:           "{{ hostname }}"
+    sessionID:          "{{ session.ansible_facts.session }}"
+  register: result_ethernet
+
+- name: Set endpoints
+  set_fact:
+    enclosure_endpoint:                   "{{ result_enclosure.ansible_facts.enclosures}}"
+    enclosure_group_endpoint:             "{{ result_eg.ansible_facts.enclosure_groups}}"
+    logical_enclosure_endpoint:           "{{ result_le.ansible_facts.logical_enclosures}}"
+
+    interconnect_endpoint:                "{{ result_ic.ansible_facts.interconnects}}"
+    interconnect_type_endpoint:           "{{ result_ic_type.ansible_facts.interconnect_types}}"
+    logical_interconnect_endpoint:        "{{ result_li.ansible_facts.logical_interconnects}}"
+    logical_interconnect_group_endpoint:  "{{ result_lig.ansible_facts.logical_interconnect_groups}}"
+    
+    server_hardware_endpoint:             "{{ result_server_hw.ansible_facts.server_hardwares}}"
+    server_profile_endpoint:              "{{ result_server_profile.ansible_facts.server_profiles}}"
+
+    uplink_set_endpoint:                  "{{ result_upl.ansible_facts.uplink_sets}}"
+    fc_network_endpoint:                  "{{ result_fc.ansible_facts.fc_networks}}"
+    fcoe_network_endpoint:                "{{ result_fcoe.ansible_facts.fcoe_networks}}"
+    ethernet_network_endpoint:            "{{ result_ethernet.ansible_facts.ethernet_networks}}"
+
+
+
+# --------------------------------------------
+#
+#  Collection starts here
+#
+# --------------------------------------------
+
+# --- Get system information
+- name: Collect server information
+  include_tasks: server-hardware-sub-inventory.yml
+  loop: '{{ server_hardware_endpoint }}'
+  loop_control:
+      loop_var: s_item
+
+  
+
+# --- Get enclosure inventory
+- name: Collect enclosure information
+  include_tasks: enclosure-inventory.yml
+  loop: '{{ enclosure_endpoint }}'
+  loop_control:
+      loop_var: enc_item

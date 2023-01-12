@@ -1,0 +1,291 @@
+---
+
+- hosts: localhost
+  collections:
+    -   community.general.remote_management
+
+  vars:
+    # List of dict name <--> uri
+    uri_to_name:              []
+
+    # For ServiceNow model and categories
+    model_categories:
+      server:                 'Server'
+      cpu:                    'Processor'
+      memory:                 'Memory'
+      nic:                    'Network Adapter'
+      controller:             'Storage Controller'
+      disk:                   'Disk'
+      composer:               'Synergy Composer'
+      SY12000InterconnectBay: 'Synergy Interconnect'
+      SY12000FanBay:          'Synergy Fan'
+      SY12000PowerSupplyBay:  'Synergy Power Supply'
+      SY12000DeviceBay:       'Synergy Device Bay'
+      EnclosureManager:       'Synergy Frame Link'
+      enclosures:             'Synergy Frame'
+      
+    company:      'HPE'
+    
+    multiplier:
+      bytes:      0
+      b:          0
+      kb:         1
+      mb:         2
+      gb:         3
+      tb:         4 
+      pb:         5
+      eb:         6
+      zb:         7
+      yb:         8 
+  
+  gather_facts: no
+
+  tasks: 
+    - name: Define timestamp
+      set_fact: timestamp="{{ lookup('pipe', 'date +%Y%m%d_%H%M') }}"
+      run_once: true
+
+    - name: eliminate "#" in CSV file
+      lineinfile:
+         path: "{{ oneview_config_csv }}" 
+         state: absent
+         regex: '^#'
+    
+    - name: read the {{ oneview_config_csv }} file
+      read_csv:
+         path: "{{ oneview_config_csv }}" 
+      register: oneview_list
+      delegate_to: localhost
+
+    - name: Generate csv/json files
+      block:
+        - name: define csv/json folder
+          set_fact:
+             csvdir:      "csv"
+
+        - name: Create dropoff directory for CSV
+          file:
+            path: "{{ csvdir }}"
+            state: directory
+
+        - name: Define CSV names
+          set_fact:
+             server_hardware_csv:       "{{csvdir}}/server_hardware.csv"
+             device_csv:                "{{csvdir}}/device.csv"
+
+             enclosure_csv:             "{{csvdir}}/enclosure.csv"
+             appliance_bay_csv:         "{{csvdir}}/appliance_bay.csv"
+             device_bay_csv:            "{{csvdir}}/device_bay.csv"
+             interconnect_bay_csv:      "{{csvdir}}/interconnect_bay.csv"
+             fan_bay_csv:               "{{csvdir}}/fan_bay.csv"
+             manager_bay_csv:           "{{csvdir}}/manager_bay.csv"
+             power_supply_bay_csv:      "{{csvdir}}/power_supply_bay.csv"
+             adapter_csv:               "{{csvdir}}/adapter.csv"
+             physical_port_csv:         "{{csvdir}}/physical_port.csv"
+             virtual_port_csv:          "{{csvdir}}/virtual_port.csv"
+
+             model_csv:                 "{{csvdir}}/model.csv"
+
+
+
+
+
+
+        # ----- CSV files contents
+        - name: create CSV model file
+          copy:
+            dest: "{{ model_csv }}"
+            content: name,model_categories,manufacturer,short_description
+
+        - name: create CSV server-hardware file
+          copy:
+            dest: "{{ server_hardware_csv }}"
+            content: >-
+              name,model_id,u_slot,u_platform,
+              u_form_factor,u_generation,u_ilo_model,u_part_number,serial_number,
+              u_bios,u_ilo_firmware,u_ip_version,
+              u_ilo_ipv4,u_ilo_ipv6,u_licensing_intent,u_ilo_license_type,
+              cpu_type,cpu_count,cpu_core_count,cpu_speed,ram,
+              u_profile_name,u_uri
+
+
+          # name,model_id,u_slot,u_platform,
+          # u_form_factor,u_generation,u_ilo_model,u_part_number,serial_number,
+          # u_bios,u_ilo_firmware,u_ip_version,
+          # u_ilo_ipv4,u_ilo_ipv6,u_licensing_intent,u_ilo_license_type,
+          # cpu_type,cpu_count,cpu_core_count,cpu_speed,ram,
+          # u_profile_name,u_uri
+
+        - name: create adapter file
+          copy:
+              dest: "{{ adapter_csv }}"
+              content: computer,name,u_device_number,u_slot,u_slot_number,model_id,manufacturer,device_id
+        # OLD:cmdb_ci,name,u_device_number,location,u_slot_number,model_id,manufacturer,adapter_id
+
+        - name: create adapter physical port file
+          copy:
+              dest: "{{ physical_port_csv }}"
+              content: cmdb_ci,name,u_port_number,u_port_type,u_physical_interconnect_port,mac,u_wwnn,pport_id
+
+        - name: create adapter virtual port file
+          copy:
+              dest: "{{ virtual_port_csv }}"
+              content: cmdb_ci,name,u_port_number,u_port_function,u_vf_count,mac,u_wwnn,u_wwpn,u_vport_id
+
+
+        - name: create CSV fan bay file
+          vars:
+            line:      >-
+                u_parent,u_bay_number,devicePresence,
+                model,u_part_number,serial_number,u_spare_part_number,status
+          # Not considered: changeState, device Required
+          copy:
+             dest:    "{{ fan_bay_csv }}"
+             content: "{{line | replace(', ' , ',')}}"
+
+
+        - name: create CSV manager bay file
+          vars:
+            line:      >-
+                u_parent,u_bay_number,devicePresence,
+                fwBuildDate,fwVersion,ipAddress,
+                linkPortSpeedGbs,linkPortState,linkPortStatus,
+                linkedEnclosure_bayNumber,linkedEnclosure_serialNumber,
+                managerType,
+                mgmtPortLinkState,mgmtPortNeighbor,mgmtPortSpeedGbs,
+                mgmtPortState,mgmtPortStatus,
+                negotiatedLinkPortSpeedGbs,
+                negotiatedMgmtPortSpeedGbs,
+                model,u_part_number,serial_number,u_spare_part_number,
+                role,status,
+                appliancePort1SpeedGbs,appliancePort1State,appliancePort1Status,
+                appliancePort2SpeedGbs,appliancePort2State,appliancePort2Status
+
+        # Not considered: bayPowerState,changeState,linkPortIsolated(bool),uidState,
+          copy:
+             dest: "{{ manager_bay_csv }}" 
+             content: "{{line | replace(', ' , ',')}}"
+
+              
+
+        - name: create CSV power_supply file
+          vars:
+            line:      >-    
+                u_parent,u_bay_number,devicePresence,
+                outputCapacityWatts,powerSupplyBayType,
+                model,u_part_number,serial_number,u_spare_part_number,
+                status	      
+          copy:
+             dest: "{{ power_supply_bay_csv }}"
+             content: "{{line | replace(', ' , ',')}}"
+
+        - name: create CSV enclosure file
+          vars:
+            line:      >-
+                name,model_id,u_enclosure_type,
+                u_licensing_intent,u_frame_link_module_domain,u_firmware_baseline_name,
+                u_appliance_bay_count,u_manager_bay_count,
+                u_device_bay_count,u_device_bay_watts,
+                u_fan_bay_count,u_fans_and_management_devices_watts,
+                u_interconnect_bay_count,u_interconnect_bay_watts,
+                u_minimum_power_supplies,u_minimum_power_supplies_for_redundancy,
+                u_part_number,serial_number,state,status,
+                reconfigurationState,refreshState,
+                u_power_allocated_watts,u_power_available_watts,powerCapacityBoostWatts,
+                u_power_capacity_watts,u_power_mode,u_power_supply_bay_count,
+                remoteSupport_destination,remoteSupport_currentState,
+                supportDataCollectionState,supportDataCollectionType,
+                enclosureGroupUri,fwBaselineUri,logicalEnclosureUri,
+                u_enclosure_group,u_logical_enclosure,
+                remoteSupportUri,scopesUri,supportDataCollectionsUri,uri
+          copy:
+             dest:    "{{ enclosure_csv }}" 
+             content: "{{line | replace(', ' , ',')}}"
+
+
+            # name,model_id,u_enclosure_type,
+            # u_licensing_intent,u_frame_link_module_domain,u_firmware_baseline_name,
+            # u_appliance_bay_count,u_manager_bay_count,
+            # u_device_bay_count,u_device_bay_watts,
+            # u_fan_bay_count,u_fans_and_management_devices_watts,
+            # u_interconnect_bay_count,u_interconnect_bay_watts,
+            # u_minimum_power_supplies,u_minimum_power_supplies_for_redundancy,
+            # u_part_number,serial_number,state,status,
+            # reconfigurationState,refreshState,
+            # u_power_allocated_watts,u_power_available_watts,powerCapacityBoostWatts,
+            # u_power_capacity_watts,u_power_mode,u_power_supply_bay_count,
+            # remoteSupport_destination,remoteSupport_currentState,
+            # supportDataCollectionState,supportDataCollectionType,
+            # enclosureGroupUri,fwBaselineUri,logicalEnclosureUri,
+            # u_enclosure_group,u_logical_enclosure,
+            # remoteSupportUri,scopesUri,supportDataCollectionsUri,uri
+
+    - name: create CSV appliance bay
+      vars:
+        line: >-
+            u_parent,u_bay_number,u_state,
+            model,partNumber,serialNumber,sparePartNumber
+      copy:
+          dest:   	"{{ appliance_bay_csv }}"
+          content:  "{{line | replace(', ' , ',')}}"
+
+
+    - name: create CSV device bay
+      vars:
+        line:   >-
+            u_parent,u_bay_number,
+            u_bay_type,u_form_factor,u_state,
+            u_server_hardware,u_server_profile,
+            u_ipv4,u_ipv6,
+            u_power_allocation,u_uri
+      copy:
+          dest: "{{ device_bay_csv }}"
+          content: "{{line | replace(', ' , ',')}}"
+
+
+        # Need to check Bool to String
+        #availableForFullHeightDoubleWideProfile,
+        #availableForFullHeightProfile,
+        #availableForHalfHeightDoubleWideProfile,
+        #availableForHalfHeightProfile
+        #enclosureName,bayNumber,bayPowerState,
+        #changeState,type,
+        #deviceBayType,deviceFormFactor,devicePresence,
+        #coveredByDevice,coveredByProfile,
+        #powerAllocationWatts,
+        #deviceUri,uri
+
+    - name: create CSV interconnect file
+      vars:
+        line:   >-
+            u_parent,u_bay_number,model_id,
+            u_ipv4,u_ipv6,
+            u_power_allocation,
+            u_part_number,serial_number,
+            u_logical_interconnect,u_uri,
+            u_logical_interconnect,u_interconnect
+            
+      # u_parent,u_bay_number,model_id,
+      # u_ipv4,u_ipv6,
+      # u_power_allocation,
+      # u_part_number,serial_number,
+      # u_logical_interconnect,u_uri,
+      # u_logical_interconnect,u_interconnect
+
+      copy:
+          dest:    "{{ interconnect_bay_csv }}"
+          content: "{{line | replace(', ' , ',')}}"
+          
+      # Not considered: serialConsole, changeState
+
+    - name: get server information
+      include_tasks: oneview-inventory-tasks.yml
+      loop: '{{oneview_list.list}}'
+      loop_control:
+         loop_var: ov_item
+    
+
+
+                
+               
+

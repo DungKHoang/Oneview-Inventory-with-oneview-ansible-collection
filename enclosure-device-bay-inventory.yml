@@ -1,0 +1,99 @@
+# --- Get  information
+- name: Initialize
+  set_fact:
+    ipv4:                             ""
+    ipv6:                             ""
+    coveredByProfile:                 ""
+    coveredByDevice:                  ""
+    powerAllocationWatts:             "0"
+    
+
+- name: Set variables
+  set_fact:
+    bayNumber:                                "{{ bay_item.bayNumber }}"
+    bayPowerState:                            "{{ bay_item.bayPowerState }}"
+    changeState:                              "{{ bay_item.changeState }}"
+
+    category:                                 "{{ bay_item.category }}"
+    type:                                     "{{ bay_item.type }}"
+    deviceBayType:                            "{{ bay_item.deviceBayType }}"
+    deviceFormFactor:                         "{{ bay_item.deviceFormFactor }}"
+    devicePresence:                           "{{ bay_item.devicePresence }}"
+    
+
+    #serialConsole:                     "{{ bay_item.serialConsole }}"
+
+    availableForFullHeightDoubleWideProfile:  "{{ bay_item.availableForFullHeightDoubleWideProfile }}"
+    availableForFullHeightProfile:            "{{ bay_item.availableForFullHeightProfile }}"
+    availableForHalfHeightDoubleWideProfile:  "{{ bay_item.availableForHalfHeightDoubleWideProfile }}"
+    availableForHalfHeightProfile:            "{{ bay_item.availableForHalfHeightProfile }}"
+
+    uri:                                      "{{ bay_item.uri}}"
+
+- block:
+    - block:
+        - name: Set Profile
+          vars:
+            _coveredByProfile:                "{{ server_profile_endpoint | selectattr('uri', 'equalto', bay_item.coveredByProfile ) | map(attribute='name') | first  }}"
+          set_fact:
+            coveredByProfile:                 "{{ _coveredByProfile |replace(', ', '-') }}"
+          when: bay_item.coveredByProfile != None
+
+        - name: Set server hardware
+          vars:
+            _coveredByDevice:                 "{{ server_hardware_endpoint | selectattr('uri', 'equalto', bay_item.coveredByDevice ) | map(attribute='name') | first  }}"
+          set_fact:
+              coveredByDevice:                "{{  _coveredByDevice |replace(', ', '-') }}"
+          when: bay_item.coveredByDevice != None
+        
+        - name: Set IPv4 
+          set_fact:
+            ipv4:                            "{{ bay_item.ipv4Setting.ipAddress }}"
+          when: bay_item.ipv4Setting != None and bay_item.ipv4Setting.mode != 'DHCP'
+
+        - name: Set IPv6
+          set_fact:
+            ipv6:                            "{{ bay_item.ipv6Setting.ipAddress }}"
+          when: bay_item.ipv6Setting != None and bay_item.ipv6Setting.mode != 'DHCP'
+
+      when: "'server-hardware' in bay_item.coveredByDevice "
+      
+    
+    - name: Set power allocation
+      set_fact:
+        powerAllocationWatts:                     "{{ bay_item.powerAllocationWatts }}" 
+
+  when: devicePresence == 'Present' 
+
+- name: Add to csv file
+  lineinfile:
+      path: "{{ device_bay_csv }}"
+      line: >-
+        {{  enclosureName + ',' + bayNumber + ',' +
+            deviceBayType + ',' + deviceFormFactor + ',' + devicePresence + ',' +
+            coveredByDevice + ',' + coveredByProfile + ',' +
+            ipv4 + ',' + ipv6 + ',' +
+            powerAllocationWatts + ',' + uri }}
+
+      #u_parent,u_bay_number,
+      #u_bay_type,u_form_factor,u_state,
+      #u_server_hardware,u_server_profile,
+      #u_ipv4,u_ipv6, 
+      #u_power_allocation,u_uri
+
+      # Need to check Bool to String
+      #availableForFullHeightDoubleWideProfile + ',' +
+      #availableForFullHeightProfile + ',' +
+      #availableForHalfHeightDoubleWideProfile + ',' +
+      #availableForHalfHeightProfile }}
+
+
+- name: Add to model csv file
+  vars:
+    _cat:           "{{ model_categories[deviceBayType] }}"
+  lineinfile:
+      path: "{{ model_csv }}"
+      line: >-
+        {{ _cat + ',' + _cat + ',' + company + ',' + deviceBayType}}
+      # name,model_categories,manufacturer,short_description
+  

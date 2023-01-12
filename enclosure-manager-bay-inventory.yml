@@ -1,0 +1,87 @@
+# --- Get  information
+- name: Set variables
+  set_fact:
+    bayNumber:                        "{{ bay_item.bayNumber }}"
+    devicePresence:                   "{{ bay_item.devicePresence }}"
+
+    fwBuildDate:                      "{{ bay_item.fwBuildDate | replace(',' , '-') | string }}"
+    fwVersion:                        "{{ bay_item.fwVersion | string }}"
+
+    ipAddress:                        "{{ bay_item.ipAddress }}"
+
+    linkPortSpeedGbs:                 "{{ bay_item.linkPortSpeedGbs }}"
+    linkPortState:                    "{{ bay_item.linkPortState }}"
+    linkPortStatus:                   "{{ bay_item.linkPortStatus }}"
+
+    linkedEnclosure_bayNumber:        "{{ bay_item.linkedEnclosure.bayNumber }}"
+    linkedEnclosure_serialNumber:     "{{ bay_item.linkedEnclosure.serialNumber }}"
+
+    managerType:                      "{{ bay_item.managerType}}"
+ 
+    mgmtPortLinkState:                "{{ bay_item.mgmtPortLinkState }}"
+    mgmtPortNeighbor:                 "{{ bay_item.mgmtPortNeighbor }}"
+    mgmtPortSpeedGbs:                 "{{ bay_item.mgmtPortSpeedGbs }}"
+    mgmtPortState:                    "{{ bay_item.mgmtPortState }}"
+    mgmtPortStatus:                   "{{ bay_item.mgmtPortStatus }}"
+
+    negotiatedLinkPortSpeedGbs:       "{{ bay_item.negotiatedLinkPortSpeedGbs }}"
+    negotiatedMgmtPortSpeedGbs:       "{{ bay_item.negotiatedMgmtPortSpeedGbs }}" 
+
+    model:                            "{{ bay_item.model }}"
+    partNumber:                       "{{ bay_item.partNumber }}"
+    serialNumber:                     "{{ bay_item.serialNumber }}"
+    sparePartNumber:                  "{{ bay_item.sparePartNumber }}"
+    role:                             "{{ bay_item.role }}"
+    status:                           "{{ bay_item.status }}"
+
+    appliancePort1SpeedGbs:           "{{ bay_item.appliancePort1SpeedGbs }}"
+    appliancePort1State:              "{{ bay_item.appliancePort1State }}"
+    appliancePort1Status:             "{{ bay_item.appliancePort1Status }}"
+
+    appliancePort2SpeedGbs:           "{{ bay_item.appliancePort2SpeedGbs }}"
+    appliancePort2State:              "{{ bay_item.appliancePort2State }}"
+    appliancePort2Status:             "{{ bay_item.appliancePort2Status }}"
+
+- name: Add to csv file
+  lineinfile:
+      path: "{{ manager_bay_csv }}"
+      line: >-
+        {{  enclosureName + ',' + bayNumber + ',' + devicePresence + ',' +
+            fwBuildDate + ',' + fwVersion + ',' +
+            ipAddress + ',' +
+            linkPortSpeedGbs + ',' + linkPortState + ',' + linkPortStatus + ',' +
+            linkedEnclosure_bayNumber + ',' + linkedEnclosure_serialNumber + ',' + 
+            managerType + ',' +
+            mgmtPortLinkState + ',' + mgmtPortNeighbor + ',' + mgmtPortSpeedGbs + ',' +
+            mgmtPortState + ',' + mgmtPortStatus + ',' +
+            negotiatedLinkPortSpeedGbs + ',' +
+            negotiatedMgmtPortSpeedGbs + ',' +
+            model + ',' + partNumber + ',' + serialNumber + ',' + sparePartNumber + ',' +
+            role + ',' + status + ',' +
+            appliancePort1SpeedGbs + ',' + appliancePort1State + ',' + appliancePort1Status + ',' +
+            appliancePort2SpeedGbs + ',' + appliancePort2State + ',' + appliancePort2Status }}
+
+      # u_parent,bay_number,devicePresence,
+      # fwBuildDate,fwVersion,
+      # ipAddress,
+      # linkPortSpeedGbs,linkPortState,linkPortStatus,
+      # linkedEnclosure_bayNumber,linkedEnclosure_serialNumber,
+      # managerType,
+      # mgmtPortLinkState,mgmtPortNeighbor,mgmtPortSpeedGbs,
+      # mgmtPortState,mgmtPortStatus,
+      # negotiatedLinkPortSpeedGbs,
+      # negotiatedMgmtPortSpeedGbs,
+      # model,u_part_number,serial_number,u_spare_part_number,
+      # role,status,
+      # appliancePort1SpeedGbs,appliancePort1State,appliancePort1Status,
+      # appliancePort2SpeedGbs,appliancePort2State,appliancePort2Status
+
+- name: Add to model csv file
+  vars:
+    _cat:           "{{ model_categories[managerType] }}"
+  lineinfile:
+      path: "{{ model_csv }}"
+      line: >-
+        {{ model + ',' + _cat + ',' + company + ',' + managerType}}
+      # name,model_categories,manufacturer,short_description
+ 

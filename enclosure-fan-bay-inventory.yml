@@ -1,0 +1,38 @@
+# --- Get  information
+- name: Set variables
+  set_fact:
+    bayNumber:                        "{{ bay_item.bayNumber }}"
+
+    devicePresence:                   "{{ bay_item.devicePresence }}"
+    deviceRequired:                   "{{ bay_item.deviceRequired }}"
+
+    fanBayType:                       "{{ bay_item.fanBayType }}"
+    model:                            "{{ bay_item.model }}"
+    partNumber:                       "{{ bay_item.partNumber }}"
+    serialNumber:                     "{{ bay_item.serialNumber }}"
+    sparePartNumber:                  "{{ bay_item.sparePartNumber }}"
+    status:                           "{{ bay_item.status }}"
+
+
+- name: Add to csv file
+  lineinfile:
+      path: "{{ fan_bay_csv }}"
+      line: >-
+        {{  enclosureName + ',' + bayNumber + ',' + devicePresence + ',' + 
+             model + ',' + partNumber + ',' + serialNumber + ',' + sparePartNumber + ',' + status }}
+
+      # u_parent,u_bay_number,devicePresence,
+      # model,u_part_number,serial_number,u_spare_part_number,status
+
+      # Not considered: changeState, device Required(Bool)
+
+- name: Add to model csv file
+  vars:
+    _cat:           "{{ model_categories[fanBayType] }}"
+    _model:         "{{ model | replace('HPE ', '') }}"
+  lineinfile:
+      path: "{{ model_csv }}"
+      line: >-
+        {{ _model + ',' + _cat + ',' + company + ',' + fanBayType}}
+      # name,model_categories,manufacturer,short_description
+ 

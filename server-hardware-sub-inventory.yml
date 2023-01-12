@@ -1,0 +1,99 @@
+# --- Get system information
+- name: Set variables
+  set_fact:
+    mpHostName:                       "{{ s_item.mpHostInfo.mpHostName }}"   
+    model:                            "{{ s_item.model}}"   
+    shortModel:                       "{{ s_item.shortModel}}"
+    position:                         "{{ s_item.position}}" 
+    platform:                         "{{ s_item.platform }}"
+    bay_name:                         "{{ s_item.name |replace(', ', '-') }}"   # A06001, Bay 1 --> A06001-Bay 1  
+    serverName:                       "{{ s_item.serverName }}"
+    operatingSystem:                  "{{ s_item.operatingSystem }}" 
+    hostOsType:                       "{{ s_item.hostOsType }}"     # It's number - TBD find OS string
+
+    eTag:                             "{{ s_item.eTag }}" 
+    formFactor:                       "{{ s_item.formFactor }}" 
+    generation:                       "{{ s_item.generation }}" 
+    romVersion:                       "{{ s_item.romVersion }}"
+
+    imlMode:                          "{{ s_item.imlMode }}"
+    intelligentProvisioningVersion:   "{{ s_item.intelligentProvisioningVersion }}"
+    licensingIntent:                  "{{ s_item.licensingIntent}}"
+
+    mpFirmwareVersion:                "{{ s_item.mpFirmwareVersion }}"
+    mpIpV4:                           "{{ s_item.mpHostInfo.mpIpAddresses[0].address }}"
+    mpIpV6:                           "{{ s_item.mpHostInfo.mpIpAddresses[1].address }}"
+    mpLicenseType:                    "{{ s_item.mpLicenseType }}"
+    mpModel:                          "{{ s_item.mpModel }}"
+
+    partNumber:                       "{{ s_item.partNumber }}"
+    serialNumber:                     "{{ s_item.serialNumber }}"
+    
+    processorCount:                   "{{ s_item.processorCount }}"
+    processorCoreCount:               "{{ s_item.processorCoreCount }}"
+    processorSpeedMhz:                "{{ s_item.processorSpeedMhz }}"
+    processorType:                    "{{ s_item.processorType }}"
+
+    memoryMb:                         "{{ s_item.memoryMb }}"
+
+    profileName:                      ""
+    scopesUri:                        ""
+    serverHardwareTypeUri:            "{{ s_item.serverHardwareTypeUri }}"
+    uri:                              "{{ s_item.uri }}"
+
+
+- name: IP information for Blade
+  set_fact:
+    mpIpV4:                           "{{ s_item.mpHostInfo.mpIpAddresses[1].address }}"
+    mpIpV6:                           "{{ s_item.mpHostInfo.mpIpAddresses[0].address }}"
+  when: "platform == 'ComputeModule'"
+
+- name: Get ProfileName
+  set_fact:
+    profileName:                      "{{ s_item.profileName }} "
+  when: "'profileName' in s_item.keys()"
+
+- name: Get Scopes
+  set_fact:
+    scopesUri:                      "{{ s_item.scopesUri}} "
+  when: "'scopesUri' in s_item.keys()"
+    
+
+- name: Add to csv file
+  lineinfile:
+      path: "{{ server_hardware_csv }}"
+      line: >-
+         {{ bay_name + ',' + model + ',' + position + ',' + platform + ',' +
+            formFactor + ',' + generation + ',' + mpModel + ',' + partNumber + ',' + serialNumber + ',' +
+            romVersion + ',' + mpFirmwareVersion + ',' + intelligentProvisioningVersion + ',' +
+            mpIpV4 + ',' + mpIpV6 + ',' + licensingIntent + ',' + mpLicenseType + ',' +
+            processorType + ',' + processorCount + ',' + processorCoreCount + ',' + processorSpeedMhz + ',' + memoryMb + ',' +
+            profileName  + ',' +  uri}}
+
+      
+      # name,model_id,u_slot,u_platform,
+      # u_form_factor,u_generation,u_ilo_model,u_part_number,serial_number,
+      # u_bios,u_ilo_firmware,u_ip_version,
+      # u_ilo_ipv4,u_ilo_ipv6,u_licensing_intent,u_ilo_license_type,
+      # cpu_type,cpu_count,cpu_core_count,cpu_speed,ram,
+      # u_profile_name, u_uri
+
+
+- name: Add to model csv file
+  lineinfile:
+      path: "{{ model_csv }}"
+      line: >-
+        {{ model + ',' + model_categories.server + ',' + company + ',' + shortModel }}
+      # name,model_categories,manufacturer,short_description
+  when: model | length > 0    # Do not add model if NULL
+
+# --- Get Devices information
+- name: Get device information
+  include_tasks: adapter-sub-inventory.yml
+  loop: "{{ s_item.portMap.deviceSlots }}"
+  loop_control:
+    loop_var: adapter
+  when: adapter.deviceName | length > 0
+
+
+
