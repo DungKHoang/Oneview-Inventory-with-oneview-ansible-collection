@@ -65,7 +65,7 @@ ansible-playbook oneview-inventory.yml --extra-vars "oneview_config_csv=oneview-
 ## Example of CSV output file 
 Here is an example of server hardware CSV file:
 
-![Server Hardware](server-image.png)
+![Server Hardware](https://github.com/DungKHoang/Oneview-Inventory-with-oneview-ansible-collection/blob/main/server-image.png)
 
 
 Enjoy!
