@@ -1,7 +1,3 @@
 ansible-playbook oneview-inventory.yml --extra-vars "oneview_config_csv=oneview-config.csv" 
 
 
-
-curl -ks -u administrator:StormLake21! "https://10.1.10.232/rest/server-hardware/33343538-3136-4332-3230-313532394752/memoryList" | python -m json.tool
-
-curl -ks -u administrator:StormLake21! "https://10.1.10.237/rest/server-hardware/33343538-3136-4332-3230-313532394752/memoryList" | python -m json.tool
