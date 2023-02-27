@@ -1,6 +1,6 @@
 ## OneView Resources Inventory 
 
-This series of Ansible playbooks perfoem an inventory of resources managed by OneView including:
+This series of Ansible playbooks perform an inventory of resources managed by OneView including:
    * ProLiant Blade servers
    * Synergy enclosures
    * Synergy frame managers
